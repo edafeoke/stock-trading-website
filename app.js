@@ -1,54 +1,34 @@
-// src/server.js
 const express = require('express');
-const axios = require('axios');
-const { Sequelize, DataTypes } = require('sequelize');
+const session = require('express-session');
+const sequelize = require('./config/database');
+const authRoutes = require('./routes/auth');
+const indexRoutes = require('./routes/index');
+const adminRoutes = require('./routes/admin');
+const path = require('path');
+
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-// Load database configuration
-const sequelize = new Sequelize(require('./config/database')[process.env.NODE_ENV || 'development']);
+// Set the view engine and the views directory
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views/pages'));
 
-// Load models
-const Stock = require('./models/stock')(sequelize, DataTypes);
 
-// Serve static files
-app.use(express.static('public'));
-app.use(express.json());
+// Middleware
+app.use(express.urlencoded({ extended: true }));
+app.use(session({ secret: 'your-secret-key', resave: false, saveUninitialized: true }));
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Endpoint to get stock data
-app.get('/api/stock/:symbol', async (req, res) => {
-  try {
-    const symbol = req.params.symbol;
+// Routes
+app.use('/auth', authRoutes);
+app.use('/', indexRoutes);
+app.use('/admin', adminRoutes);
 
-    // Check if the stock is in the database
-    const stock = await Stock.findOne({
-      where: { symbol },
-    });
+// ... other routes and middleware
 
-    if (stock) {
-      // If the stock is in the database, return the data
-      res.json(stock.toJSON());
-    } else {
-      // If the stock is not in the database, fetch data from the API
-      const apiKey = 'YOUR_API_KEY';
-      const apiUrl = `https://api.example.com/stock/${symbol}?apikey=${apiKey}`;
-      const response = await axios.get(apiUrl);
-      const stockData = response.data; // Adjust based on the actual API response structure
-
-      // Save the stock data to the database
-      const createdStock = await Stock.create(stockData);
-
-      res.json(createdStock.toJSON());
-    }
-  } catch (error) {
-    console.error('Error handling stock request:', error.message);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
-
-// Sync the database and start the server
+// Database synchronization
 sequelize.sync().then(() => {
+  const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
   });
