@@ -1,30 +1,41 @@
+// admin.js
+
 const express = require('express');
 const router = express.Router();
+const User = require('../models/User');
+const middlewares = require('../middlewares');
 
-// Middleware to check if the user is an admin
-const isAdmin = (req, res, next) => {
-  // Assuming you have a way to identify admin users in your User model
-  const isAdminUser = req.session.user && req.session.user.isAdmin;
-
-  if (!isAdminUser) {
-    // User is an admin, proceed to the next middleware or route handler
-    next();
-  } else {
-    // User is not an admin, redirect to a non-admin page or show an error
-    res.status(403).send('Permission denied. You are not an admin.');
-  }
-};
+const { isLoggedIn, isAdmin } = middlewares;
 
 // Admin Dashboard
-router.get('/', isAdmin, (req, res) => {
+router.get('/', isLoggedIn, isAdmin, async (req, res) => {
   // Render the admin dashboard view
-  res.render('admin/dashboard');
+  const currentRoute = '/admin';
+  const user = req.session.user;
+  const users = await User.findAll();
+  res.render('admin/dashboard', { user, currentRoute, users });
 });
 
 // Admin Settings
-router.get('/admin/settings', isAdmin, (req, res) => {
+router.get('/settings', isLoggedIn, isAdmin, (req, res) => {
   // Render the admin settings view
   res.render('admin/settings');
+});
+
+// Admin Users - Render all users
+router.get('/users', isLoggedIn, isAdmin, async (req, res) => {
+  const currentRoute = '/admin/users';
+  try {
+    // Fetch all users from the database
+    const allUsers = await User.findAll();
+    const user = req.session.user;
+
+    // Render the admin users view with the list of users
+    res.render('admin/users', { users: allUsers, user, currentRoute });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).send('Internal Server Error');
+  }
 });
 
 // Add more admin routes as needed

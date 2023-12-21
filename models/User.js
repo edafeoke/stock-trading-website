@@ -30,11 +30,17 @@ const User = sequelize.define('User', {
   email: {
     type: DataTypes.STRING,
     allowNull: false,
-    unique:true,
+    unique: true,
   },
   isAdmin: {
     type: DataTypes.BOOLEAN,
-    allowNull: true,
+    allowNull: false,
+    defaultValue:false
+  },
+  status: {
+    type: DataTypes.ENUM('active', 'pending', 'blocked'),
+    defaultValue: 'pending',
+    allowNull: false,
   },
 });
 
